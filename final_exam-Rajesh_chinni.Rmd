@@ -1,0 +1,293 @@
+---
+title: "final_exam-Rajesh_chinni"
+output: html_document
+---
+
+```{r}
+babydata = read.csv('data_babies.csv')
+babydata
+```
+
+```{r}
+#1
+babydata[row.names(babydata)[rowSums(is.na(babydata))>0],colnames(babydata)[colSums(is.na(babydata))>0] ]
+mean(babydata$gestation, na.rm = TRUE)
+babydata$gestation[is.na(babydata$gestation)] <- mean(babydata$gestation, na.rm = TRUE)
+babydata
+cor(babydata$bwt,babydata$gestation)
+# since correlation is not zero, there is linear association between 2 variables bwt and gestation. yes it is a good #predictor of  birth weight of babies
+require(lattice)
+xyplot(bwt~gestation, data= babydata)
+bwtandgestation  <- lm ( bwt  ~  gestation ,  data =  babydata )
+bwtandgestation
+anova(bwtandgestation)
+# bwt = 0.4643*gestation-10.1096
+# For each additional % point in gestation, we would expect the birth weight of babies on average to be increased by 
+#0.46% points.
+
+
+```
+
+```{r}
+#2
+babydata[row.names(babydata)[rowSums(is.na(babydata))>0],colnames(babydata)[colSums(is.na(babydata))>0] ]
+# i assume all the NA values to be smoking.
+babydata$smoke[is.na(babydata$smoke)] <- 1
+babydata
+cor(babydata$bwt,babydata$smoke)
+#since correlation is not zero, there is linear association between 2 variables bwt and smoke. 
+require(lattice)
+xyplot(bwt~smoke, data= babydata)
+bwtandsmoke  <- lm ( bwt  ~  smoke ,  data =  babydata )
+bwtandsmoke
+summary(bwtandsmoke)
+anova(bwtandsmoke)
+# bwt = 123.047 - 8.683*smoke
+# If mother is not a smoker then the baby weight on birth would be 123.047. If mother smokes then baby weight on birth would be 8.683 less than the baby weight of non smoker.
+```
+
+```{r}
+#3
+
+mean(babydata$height, na.rm = TRUE)
+babydata$height[is.na(babydata$height)] <- mean(babydata$height, na.rm = TRUE)
+mean(babydata$age, na.rm = TRUE)
+babydata$age[is.na(babydata$age)] <- mean(babydata$age, na.rm = TRUE)
+mean(babydata$weight, na.rm = TRUE)
+babydata$weight[is.na(babydata$weight)] <- mean(babydata$weight, na.rm = TRUE)
+
+m_full = lm ( bwt ~ gestation + smoke + parity + height + age + weight, data = babydata )
+summary (m_full )
+
+# bwt = 0.44289*gestation-7.75*smoke-3.14*parity+1.11*height+age*0.01+weight*0.051
+# Slope of gestation: All else held constant, baby weight on birth that are 1 more
+#ounces in weight tend to weigh about 0.72 ounces more
+#Slope of smoke: All else held constant, if mother smokes then baby weight on birth would be less by 7.75 ounces.
+#Slope of Parity: All else held constant, if not first born then baby weight on birth would be less by 3.14 ounces.
+#Slope of height: All else held constant, for each inch height of mother the baby's weight grows by 1.1 ounces.
+#Slope of age: All else held constant, for each year age of mother the baby's weight grows by 0.01 ounces.
+#Slope of weight: All else held constant, for each ounce of height of mother the baby's weight grows by 0.051 ounces.
+
+# Using backward-selection and p-value as the selection criterion, i have removed age and the following is the model. I have selected the independent variables whose p-value is less than 0.05.
+
+m_full1 = lm ( bwt ~ gestation + smoke + parity + height + weight, data = babydata )
+summary (m_full1 )
+
+
+
+```
+
+```{r}
+#4
+
+# Intl.Plan, CustServ.Calls
+# Day.Mins, Day.Calls, Day.Charge, Eve.Charge, Night.Charge
+# Using Numerical Values and Predicting the risk
+require(class)
+pappu = read.csv('churn.csv')
+pappu
+require(ggplot2)
+
+normalize<-function(x){
+  (x-min(x))/(max(x)-min(x))
+}
+
+input=pappu[,c('Day.Mins','Day.Calls','Day.Charge','Eve.Charge','Night.Charge')]
+input.norm<-sapply(input, normalize)
+
+label<-pappu$Churn.
+set.seed(1234)
+
+indicies=sample(1:2,length(pappu$Churn.), replace = T, prob=c(.8,.2))
+indicies
+
+training.input=input.norm[indicies==1, ]
+training.input
+training.label=label[indicies==1]
+training.label
+testing.input=input.norm[indicies==2,]
+testing.input
+testing.label=label[indicies==2]
+testing.label
+
+nrow(pappu)
+sqrt(nrow(pappu))
+# which is 57.73. Therefore, k value is 58
+
+require(class)
+set.seed(1234)
+predicted.label<-knn(train=training.input, cl=training.label, test=testing.input, k=58)
+predicted.label
+
+data.frame(predicted.label, testing.label)
+
+sum(predicted.label==testing.label)/length(testing.label)
+
+prop.table(table(pappu$Churn.))
+
+table(predicted.label,testing.label)
+
+accuracy=sum(predicted.label==testing.label)/length(predicted.label) 
+accuracy
+```
+
+```{r}
+#Updating the Model to Include Categorical values for predicting the results
+# Intl.Plan, CustServ.Calls
+
+require(class)
+require(ggplot2)
+
+normalize<-function(x){
+  (x-min(x))/(max(x)-min(x))
+}
+
+table(pappu$Intl.Plan)
+class_dummies=model.matrix( ~Intl.Plan - 1, data=pappu) 
+head(class_dummies)
+
+table(pappu$CustServ.Calls)
+class_dummies1=model.matrix( ~CustServ.Calls -1, data=pappu) 
+head(class_dummies1)
+
+
+input= subset(pappu, select=c(Day.Mins,Day.Calls,Day.Charge,Eve.Charge,Night.Charge)) 
+input = data.frame(input,class_dummies)
+input = data.frame(input,class_dummies1)
+input
+
+
+input.norm<-sapply(input, normalize)
+input.norm
+
+label<-pappu$Churn.
+set.seed(1234)
+
+indicies=sample(1:2,length(pappu$Churn.), replace = T, prob=c(.8,.2))
+
+
+training.input=input.norm[indicies==1, ]
+training.input
+training.label=label[indicies==1]
+training.label
+testing.input=input.norm[indicies==2,]
+testing.input
+testing.label=label[indicies==2]
+testing.label
+require(class)
+
+set.seed(1234)
+predicted.label<-knn(train=training.input, cl=training.label, test=testing.input, k=1)
+predicted.label
+
+data.frame(predicted.label, testing.label)
+
+sum(predicted.label==testing.label)/length(testing.label)
+
+prop.table(table(pappu$Churn.))
+
+table(predicted.label,testing.label)
+
+accuracy=sum(predicted.label==testing.label)/length(predicted.label) 
+accuracy
+
+# The accuracy is 84%% with numeric variables and 82% with both numeric and categorical variables. Therefore, we #choose only numeric variables to predict the churn.
+#Confusion matrix: out of 549 times of false, we poredicted it correct in 498 times.Out of 117 times of true, we poredicted it correct in 52 times.
+```
+
+```{r}
+# 5A
+
+# Eve.Mins, Eve.Calls, Night.Mins, Day.Charge
+
+library(tree)
+# Step 1: normalise, split training and test data (same as knn)
+
+library(ggplot2)
+#Generic function created to reuse for normalizing the variables
+normalize<-function(x){
+  (x-min(x))/(max(x)-min(x))
+}
+
+#Assign input and label
+input=pappu[,c('Eve.Mins','Eve.Calls','Night.Mins','Day.Charge')]
+input.norm<-sapply(input, normalize) # Normalize the input
+label<-pappu$Churn.
+
+# Split training and test data
+set.seed(1234) 
+indicies=sample(1:2,length(pappu$Churn.), replace = T, prob=c(.8,.2))
+indicies
+## Data Split
+train_data=input.norm[indicies==1, ]
+train_labels=label[indicies==1]
+test_data=input.norm[indicies==2,]
+test_labels=label[indicies==2]
+
+test_data<-data.frame(test_data, test_labels)
+head(test_data)
+
+train_data<-data.frame(train_data, train_labels)
+head(train_data)
+
+#Step 2: Application of decision tree:
+
+
+require('tree')
+# Implementing the model decision tree
+my.model<-tree(Churn.~Eve.Mins+Eve.Calls+Night.Mins+Day.Charge, data=pappu)
+
+summary(my.model)
+
+#Examine the model
+plot(my.model) 
+text(my.model)
+
+#Step 3: Prediction:
+
+#(my.model)
+#node, split, n, deviance, yval, (yprob)
+
+#my.predictions=predict(my.model, test_data, type='class')
+#my.predictions
+# i have stopped here as my code was not running because of technical reasons.
+#test_data$test_labels
+
+#results=data.frame(my.predictions,test_data$test_labels )
+#results
+#table(results)
+
+#accuracy=sum(my.predictions==test_labels)/length(my.predictions) 
+#accuracy
+
+#Step 4: Cross validation:
+
+#require(tree) 
+#cv_tree=cv.tree(my.model, FUN=prune.misclass)
+#names(cv_tree)
+
+#plot( cv_tree$size, cv_tree$dev , type='b')
+
+# based on above plot choose the number. 
+
+#pruned.model<-prune.misclass(my.model, best=2)
+#plot(pruned.model)
+#text(pruned.model)
+
+
+# Step 5: Update predicition
+
+#pruned.predictions<-predict(pruned.model, test_data, type='class')
+
+#table(pruned.predictions, test_data$test_labels)
+
+#accuracy=sum(pruned.predictions==test_labels)/length(pruned.predictions) 
+#
+
+
+
+
+
+
+```
+

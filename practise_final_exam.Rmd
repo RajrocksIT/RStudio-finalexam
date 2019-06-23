@@ -1,0 +1,12 @@
+---
+title: "practise_final_exam"
+output: html_document
+---
+
+```{r}
+library(datasets)
+
+states <- data.frame(state.x77, abb=state.abb, region=state.region, division=state.division)
+states
+```
+
